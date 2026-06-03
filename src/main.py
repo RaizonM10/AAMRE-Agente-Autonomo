@@ -21,20 +21,17 @@ import sys
 import time
 from pathlib import Path
 
+
 # Agregar src/ al path para imports directos
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-
+from telegram_bot import activar_receptor_telegram
 from configuracion import CONFIG
 from ejecutivo import AgenteAAMRE
 from logger_manager import LoggerManager
 
 
 def parsear_argumentos() -> argparse.Namespace:
-    """Parsea los argumentos de línea de comandos.
-
-    Returns:
-        Namespace con los argumentos parseados.
-    """
+    """Parsea los argumentos de línea de comandos."""
     parser = argparse.ArgumentParser(
         prog="AAMRE",
         description=(
@@ -81,11 +78,7 @@ def imprimir_banner() -> None:
 
 
 def main() -> int:
-    """Función principal del sistema AAMRE.
-
-    Returns:
-        Código de salida (0 = éxito, 1 = error).
-    """
+    """Función principal del sistema AAMRE."""
     args = parsear_argumentos()
     imprimir_banner()
 
@@ -101,6 +94,24 @@ def main() -> int:
 
     try:
         agente = AgenteAAMRE(safe_mode=safe_mode)
+
+        # =========================================================
+        # NUEVA SECCIÓN: CONTROL REMOTO TELEGRAM
+        # =========================================================
+        def forzar_limpieza_remota():
+            """Esta función se ejecutará cuando mandes /limpiar por Telegram"""
+            log.info("MAIN", "Comando /limpiar recibido, ejecutando barrido remoto...")
+            try:
+                escaneo = agente._sensor.escanear_entorno()
+                agente._actuadores.eliminar_temporales(escaneo.archivos_temporales)
+                log.info("MAIN", "Barrido remoto completado con éxito.")
+            except Exception as e:
+                log.error("MAIN", f"Fallo en limpieza remota: {e}")
+
+        # Encendemos la oreja en segundo plano antes de arrancar el agente principal
+        activar_receptor_telegram(forzar_limpieza_remota)
+        # =========================================================
+
         agente.iniciar()
 
         if args.duracion is not None:
