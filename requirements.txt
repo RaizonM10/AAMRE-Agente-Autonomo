@@ -16,3 +16,4 @@ pytest-cov>=4.1.0
 # threading -> incluida en stdlib
 # logging   -> incluida en stdlib
 # dataclasses -> incluida en stdlib
+requests>=2.31.0

@@ -24,6 +24,7 @@ from actuadores import GestorActuadores
 from configuracion import CONFIG
 from logger_manager import LoggerManager
 from percepcion import EstadoDisco, SensorVirtual
+from telegram_bot import enviar_alerta_emergencia
 
 _COMPONENTE = "REACTIVO"
 
@@ -211,6 +212,13 @@ class CapaReactiva:
         if self._deliberativo_suspender_cb:
             self._deliberativo_suspender_cb.set()
             self._log.warning(_COMPONENTE, "Capa deliberativa SUSPENDIDA")
+
+        # --- AVISO A TELEGRAM (NUEVO) ---
+        try:
+            enviar_alerta_emergencia(estado.porcentaje_uso)
+        except Exception as e:
+            self._log.error(_COMPONENTE, f"Fallo al avisar a Telegram: {e}")
+        # -------------------------------
 
         # Ejecutar limpieza de emergencia
         try:
