@@ -1,0 +1,18 @@
+# AAMRE - Agente Autónomo de Mantenimiento y Recuperación de Espacio
+# Dependencias del proyecto
+
+# Monitoreo del sistema
+psutil>=5.9.8
+
+# Programación de tareas periódicas
+schedule>=1.2.1
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Utilidades de formato y tipado (stdlib en Python 3.11+, incluidas explícitamente para claridad)
+# pathlib  -> incluida en stdlib
+# threading -> incluida en stdlib
+# logging   -> incluida en stdlib
+# dataclasses -> incluida en stdlib
