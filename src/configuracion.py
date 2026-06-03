@@ -79,9 +79,9 @@ class ConfigActuadores:
         respetar_sistema: No tocar rutas del sistema operativo.
     """
 
-    safe_mode: bool = True
-    ruta_escaneo: Path = field(default_factory=lambda: Path.home())
-    respetar_sistema: bool = True
+    safe_mode: bool = False
+    ruta_escaneo: Path = Path("C:/Prueba_AAMRE")
+    respetar_sistema: bool = False
 
 
 @dataclass(frozen=True)
