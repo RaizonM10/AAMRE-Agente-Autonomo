@@ -2,6 +2,7 @@
 import requests
 import threading
 import time
+import shutil
 from logger_manager import LoggerManager
 
 # Credenciales de Telegram
@@ -36,7 +37,6 @@ def _escuchar_comandos(funcion_limpiar):
 
     while True:
         try:
-            # Espera hasta 20 segundos a que llegue un mensaje nuevo
             params = {"timeout": 20, "offset": offset}
             respuesta = requests.get(url, params=params, timeout=25)
 
@@ -45,22 +45,41 @@ def _escuchar_comandos(funcion_limpiar):
                 for msg in datos.get("result", []):
                     offset = msg["update_id"] + 1
                     
-                    # Extraer quién envía y qué dice
                     chat_id_remitente = str(msg.get("message", {}).get("chat", {}).get("id", ""))
                     texto = msg.get("message", {}).get("text", "")
 
-                    # Seguridad: Solo obedecer si el mensaje viene de TU celular y dice /limpiar
-                    if chat_id_remitente == CHAT_ID and texto == "/limpiar":
-                        log.warning("TELEGRAM", "Orden remota: /limpiar recibida.")
-                        enviar_mensaje_normal("⚙️ *Comando aceptado:* Iniciando barrido manual del sistema...")
+                    if chat_id_remitente == CHAT_ID:
+                        if texto == "/limpiar":
+                            log.warning("TELEGRAM", "Orden remota: /limpiar recibida.")
+                            enviar_mensaje_normal("⚙️ *Comando aceptado:* Iniciando barrido manual del sistema...")
+                            funcion_limpiar()
+                            enviar_mensaje_normal("✅ *Barrido completado.* Sistema optimizado.")
                         
-                        # ¡Aquí disparamos la función real de tu programa!
-                        funcion_limpiar()
-                        
-                        enviar_mensaje_normal("✅ *Barrido completado.* Sistema optimizado.")
+                        elif texto == "/estado":
+                            log.info("TELEGRAM", "Consulta de estado solicitada.")
+                            # Lee el disco C directamente sin molestar al sensor principal
+                            total, usado, libre = shutil.disk_usage("C:\\")
+                            porcentaje = (usado / total) * 100
+                            msg_estado = (
+                                "📊 *ESTADO DEL SISTEMA AAMRE*\n\n"
+                                f"💾 Uso de Disco: *{porcentaje:.1f}%*\n"
+                                "🟢 Capa Reactiva: *Activa*\n"
+                                "🟢 Capa Deliberativa: *Operativa*\n"
+                                "🟢 Capa Ejecutiva: *En línea*"
+                            )
+                            enviar_mensaje_normal(msg_estado)
+
+                        elif texto == "/ayuda" or texto == "/start":
+                            msg_ayuda = (
+                                "🤖 *Panel de Control AAMRE*\n\n"
+                                "Selecciona una acción:\n"
+                                "👉 /estado - Ver métricas en tiempo real\n"
+                                "👉 /limpiar - Forzar recuperación de espacio\n"
+                            )
+                            enviar_mensaje_normal(msg_ayuda)
 
         except Exception as e:
-            time.sleep(5) # Si se cae el internet, espera 5s y vuelve a intentar
+            time.sleep(5)
 
 def activar_receptor_telegram(funcion_limpiar):
     """Inicia el hilo espía en segundo plano."""

@@ -40,6 +40,7 @@ class ConfigReactivo:
     """
 
     umbral_critico: float = 95.0
+    umbral_alerta: float = 80.0
     umbral_recuperacion: float = 90.0
     intervalo_monitoreo_seg: float = 5.0
 
@@ -80,7 +81,7 @@ class ConfigActuadores:
     """
 
     safe_mode: bool = False
-    ruta_escaneo: Path = Path("C:/Prueba_AAMRE")
+    ruta_escaneo: Path = Path("D:/")
     respetar_sistema: bool = False
 
 

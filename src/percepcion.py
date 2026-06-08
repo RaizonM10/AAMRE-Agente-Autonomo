@@ -284,3 +284,17 @@ class SensorVirtual:
             directorios_cache=caches,
             espacio_recuperable_bytes=espacio,
         )
+    def obtener_uso_disco(self, ruta: Path | None = None) -> EstadoDisco:
+        """Mide el uso actual del disco de forma dinámica."""
+        if ruta is None:
+            # Extrae automáticamente la raíz (ej. 'D:\') de tu ruta configurada
+            ruta = Path(self._ruta_escaneo.anchor)
+
+        uso = psutil.disk_usage(str(ruta))
+        return EstadoDisco(
+            ruta=ruta,
+            total_bytes=uso.total,
+            usado_bytes=uso.used,
+            libre_bytes=uso.free,
+            porcentaje_uso=uso.percent,
+        )

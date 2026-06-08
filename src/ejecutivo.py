@@ -27,7 +27,12 @@ from deliberativo import CapaDeliberativa
 from logger_manager import LoggerManager
 from percepcion import SensorVirtual
 from reactivo import CapaReactiva
-from utils import formatear_bytes
+
+# Importación para telemetría
+try:
+    from telegram_bot import enviar_mensaje_normal
+except ImportError:
+    enviar_mensaje_normal = lambda msg: None
 
 _COMPONENTE = "EJECUTIVO"
 
@@ -80,6 +85,10 @@ class AgenteAAMRE:
         self._lock_arbitraje = threading.Lock()
         self._activo: bool = False
 
+        # Banderas Anti-Spam para notificaciones
+        self._alerta_80_enviada = False
+        self._emergencia_95_enviada = False
+
         # Suscripción del sensor al ejecutivo (patrón Observer)
         self._sensor.suscribir("EJECUTIVO", self._on_estado_disco)
 
@@ -106,11 +115,37 @@ class AgenteAAMRE:
     def _on_estado_disco(self, estado) -> None:  # type: ignore[no-untyped-def]
         """Callback invocado por el sensor cuando hay una actualización.
 
-        Registra el estado en el log ejecutivo para trazabilidad.
+        Registra el estado en el log ejecutivo para trazabilidad y 
+        ejecuta la lógica de control de flujo (Alerta vs Autonomía).
 
         Args:
             estado: Snapshot ``EstadoDisco`` recibido del sensor.
         """
+        uso = estado.porcentaje_uso
+        umbral_critico = CONFIG.reactivo.umbral_critico
+        umbral_alerta = getattr(CONFIG.reactivo, 'umbral_alerta', 80.0)
+
+        # NIVEL 2: EMERGENCIA AUTÓNOMA (>= 95%)
+        if uso >= umbral_critico:
+            if not self._emergencia_95_enviada:
+                self._log.warning(_COMPONENTE, f"🚨 USO CRÍTICO ({uso:.1f}%). Protocolo Autónomo Iniciado.")
+                enviar_mensaje_normal(f"🚨 *Protocolo Autónomo:* Disco al {uso:.1f}%. Riesgo de colapso. Iniciando limpieza forzada automáticamente...")
+                self._actuadores.eliminar_temporales()
+                self._emergencia_95_enviada = True
+
+        # NIVEL 1: ALERTA (80% - 94%)
+        elif uso >= umbral_alerta:
+            self._emergencia_95_enviada = False  # Resetea emergencia si el disco bajó del 95%
+            if not self._alerta_80_enviada:
+                self._log.info(_COMPONENTE, f"⚠️ Nivel de alerta alcanzado ({uso:.1f}%). Solicitando intervención.")
+                enviar_mensaje_normal(f"⚠️ *Alerta AAMRE:* Disco al {uso:.1f}%. El sistema se acerca al límite. ¿Deseas liberar espacio ahora? Responde /limpiar")
+                self._alerta_80_enviada = True
+
+        # ESTADO NORMAL (< 80%)
+        else:
+            self._alerta_80_enviada = False
+            self._emergencia_95_enviada = False
+
         self._log.debug(_COMPONENTE, f"Estado recibido: {estado}")
 
     # ------------------------------------------------------------------
